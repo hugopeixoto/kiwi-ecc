@@ -18,7 +18,7 @@ TEST(KiwiEccCompiler, ShouldCompileEmptyFile)
 TEST(KiwiEccCompiler, ShouldCompileSimpleHTML)
 {
   EXPECT_EQ(
-    "(output_buffer) << \"<\";(output_buffer) << \"h1>Hello\";(output_buffer) << \"<\";(output_buffer) << \"/h1>\";",
+    "(output_buffer) << \"<h1>Hello</h1>\";",
     Compiler().compile("<h1>Hello</h1>"));
 }
 
@@ -32,14 +32,14 @@ TEST(KiwiEccCompiler, ShouldCompilePrintTag)
 TEST(KiwiEccCompiler, ShouldCompileExecuteTag)
 {
   EXPECT_EQ(
-    " debug_trace(); ",
-    Compiler().compile("<% debug_trace(); %>"));
+    " debug_trace() ;",
+    Compiler().compile("<% debug_trace() %>"));
 }
 
 TEST(KiwiEccCompiler, ShouldCompilePrintAndExecuteTag)
 {
   EXPECT_EQ(
-    " int i = 2; (output_buffer) <<  i ;",
-    Compiler().compile("<% int i = 2; %><%= i %>"));
+    " int i = 2 ;(output_buffer) <<  i ;",
+    Compiler().compile("<% int i = 2 %><%= i %>"));
 }
 

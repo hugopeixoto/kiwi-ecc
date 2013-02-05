@@ -8,18 +8,21 @@
 %{
 #include "kiwi/ecc/compiler.h"
 #include <vector>
+
+using kiwi::ecc::Compiler;
+
 %}
 
 %option reentrant
-%option extra-type="kiwi::ecc::Compiler*"
+%option extra-type="Compiler*"
 %x IN_CC CC_COMMENT CC_STRING
 %%
 
 <INITIAL>{
-"<%="   yyextra->begin_coder(true); BEGIN(IN_CC);
-"<%"    BEGIN(IN_CC);
-[^<]+   yyextra->print_html(yytext);
-"<"     yyextra->print_html(yytext);
+"<%="   yyextra->begin(Compiler::State::CC_RENDER); BEGIN(IN_CC);
+"<%"    yyextra->begin(Compiler::State::CC_EXEC); BEGIN(IN_CC);
+[^<]+   yyextra->add(yytext);
+"<"     yyextra->add(yytext);
 }
 
 <CC_COMMENT>{
@@ -29,17 +32,17 @@
 }
 
 <CC_STRING>{
-"\""        yyextra->print_cc(yytext); BEGIN(IN_CC);
-\\.         yyextra->print_cc(yytext);
-[^\\"]+     yyextra->print_cc(yytext);
+"\""        yyextra->add(yytext); BEGIN(IN_CC);
+\\.         yyextra->add(yytext);
+[^\\"]+     yyextra->add(yytext);
 }
 
 <IN_CC>{
-"%>"        yyextra->end_coder(); BEGIN(INITIAL);
-"\""        yyextra->print_cc(yytext); BEGIN(CC_STRING);
+"%>"        yyextra->begin(Compiler::State::HTML); BEGIN(INITIAL);
+"\""        yyextra->add(yytext); BEGIN(CC_STRING);
 "/*"        BEGIN(CC_COMMENT);
-[^%"/]+     yyextra->print_cc(yytext);
-"%"         yyextra->print_cc(yytext);
+[^%"/]+     yyextra->add(yytext);
+"%"         yyextra->add(yytext);
 }
 
 %%
@@ -63,8 +66,8 @@ void Compiler::compile (FILE* a_in, FILE* a_out)
     yyscan_t scanner;
 
     // init
-    printing = false;
     writer = new FileWriter(a_out);
+    begin(State::HTML);
 
     yyset_in(a_in, scanner);
 
@@ -72,6 +75,8 @@ void Compiler::compile (FILE* a_in, FILE* a_out)
     yylex_init_extra(this, &scanner);
     yylex(scanner);
     yylex_destroy(scanner);
+
+    end();
 }
 
 std::string Compiler::compile (const std::string& a_input)
@@ -79,8 +84,8 @@ std::string Compiler::compile (const std::string& a_input)
     yyscan_t scanner;
 
     // init
-    printing = false;
     writer = new StringWriter();
+    begin(State::HTML);
 
     yylex_init_extra(this, &scanner);
     YY_BUFFER_STATE state = yy_scan_string(a_input.c_str(), scanner);
@@ -88,40 +93,49 @@ std::string Compiler::compile (const std::string& a_input)
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
 
+    end();
+
     return static_cast<StringWriter*>(writer)->buffer;
 }
 
-void Compiler::begin_coder (bool a_printing)
+void Compiler::begin (State a_state)
 {
-  printing = a_printing;
-  puts("(output_buffer) << ");
+  end();
+
+  state = a_state;
 }
 
-void Compiler::end_coder ()
+void Compiler::end ()
 {
-  if (printing) {
+  if (buffer.size()) {
+    switch (state) {
+      case State::HTML:
+        puts("(output_buffer) << \"");
+        for (size_t i = 0; i < buffer.size(); ++i) {
+          putc(buffer[i]);
+        }
+
+        puts("\"");
+        break;
+
+      case State::CC_RENDER:
+        puts("(output_buffer) << ");
+        puts(buffer.c_str());
+        break;
+
+      case State::CC_EXEC:
+        puts(buffer.c_str());
+        break;
+    }
+
     puts(";");
+    buffer.resize(0);
   }
 }
 
-void Compiler::print_html (const char* a_html)
+void Compiler::add (const char* a_buffer)
 {
-  begin_coder(true);
-  puts("\"");
-
-  printf(">>%s\n", a_html);
-
-  while (*a_html) {
-    putc(*a_html++);
-  }
-
-  puts("\"");
-  end_coder();
-}
-
-void Compiler::print_cc (const char* a_cc)
-{
-  puts(a_cc);
+  buffer.append(a_buffer);
 }
 
 void Compiler::puts (const char* a_string)

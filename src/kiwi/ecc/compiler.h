@@ -22,11 +22,17 @@ namespace kiwi {
       std::string compile (const std::string& a_input);
 
       public:
-      void begin_coder (bool a_printing);
-      void end_coder ();
+      enum class State {
+        HTML,
+        CC_EXEC,
+        CC_RENDER
+      };
 
-      void print_html (const char* a_html);
-      void print_cc (const char* a_cc);
+      public:
+      void begin (State state);
+      void end ();
+
+      void add (const char* a_buffer);
 
       void putc (char a_character);
       void puts (const char* a_string);
@@ -55,8 +61,8 @@ namespace kiwi {
 
       Writer* writer;
 
-      bool printing;
-      bool string;
+      std::string buffer;
+      State state;
     };
   }
 }
