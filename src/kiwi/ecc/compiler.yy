@@ -8,6 +8,7 @@
 %{
 #include "kiwi/ecc/compiler.h"
 #include <vector>
+#include <cstdarg>
 
 using kiwi::ecc::Compiler;
 
@@ -69,10 +70,10 @@ void Compiler::compile (FILE* a_in, FILE* a_out)
     writer = new FileWriter(a_out);
     begin(State::HTML);
 
-    yyset_in(a_in, scanner);
-
     // compiler
     yylex_init_extra(this, &scanner);
+    yyset_in(a_in, scanner);
+
     yylex(scanner);
     yylex_destroy(scanner);
 
