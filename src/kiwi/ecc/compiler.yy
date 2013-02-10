@@ -111,7 +111,7 @@ void Compiler::end ()
   if (buffer.size()) {
     switch (state) {
       case State::HTML:
-        puts("(output_buffer) << \"");
+        puts("output_buffer() << \"");
         for (size_t i = 0; i < buffer.size(); ++i) {
           putc(buffer[i]);
         }
@@ -120,7 +120,7 @@ void Compiler::end ()
         break;
 
       case State::CC_RENDER:
-        puts("(output_buffer) << ");
+        puts("output_buffer() << ");
         puts(buffer.c_str());
         break;
 
